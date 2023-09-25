@@ -17,35 +17,42 @@ recordcollection=mydatabase["records"]
 jobcollection=mydatabase["jobqueue"]
 
 
-exportChannel = os.getenv('channel_id')
-device_id = os.getenv('device_id')
-deck_id = os.getenv('deck_id')
-pen_id = os.getenv('pen_id')
-
-
-
-def add_backgroundjob(filepath:str):    
+def add_backgroundjob(record:any,device_destination_folder:str):    
     doc1 = {
-        "exporterchannel": exportChannel,
-        "deck":"1",
-        "penId":"1",
-        "device_id":"1",
-        "record_time": datetime.datetime.now(),
-        "device_filepath":filepath               
+        "exporterchannel": record["exporterchannel"],
+        "deck":record["deck"],
+        "penId":record["pen"],
+        "job_status":0,
+        "deviceId":record["device_id"],
+        "location":record["location"],
+        "eventTime": datetime.datetime.now(),
+        "video_image_path":device_destination_folder,     
+        "files":record["files"],
+        "device_tasks":record["tasks"],
+        "device_configuration":record["config"]              
     }
     jobcollection.insert_one(doc1)
 
 
 def add_temperature_records(recordStr:str):
     record =json.loads(recordStr)
+    #print(record["sensor_data"]["raw_temperature"])
     doc1 = {
-        "exporterchannel": exportChannel,
-        "deck":"1",
-        "penId":"1",
+        "exporterchannel": record["exporterchannel"],
+        "deck":record["deck"],
+        "penId":record["pen"],        
         "is_event":False,
+        "deviceId":record["device_id"],
+        "location":record["location"],
         "eventTime": datetime.datetime.now(),
-        "temperature":record["raw_temperature"],
-        "RH":record["raw_humidity"],
-        "WBT":"2",        
+        "temperature":record["temperature"],
+        "RH":record["RH"],
+        "WBT":record["WBT"], 
+        "NH3":record["NH3"],
+        "lattitude":37.8136,
+        "longitude":144.9631,
+        "CO2":record["CO2"],
+        "CH4":record["CH4"],
+        "is_synced":False       
     }
     recordcollection.insert_one(doc1)

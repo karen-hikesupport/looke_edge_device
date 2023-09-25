@@ -5,13 +5,13 @@ import os
 from paho.mqtt import client as mqtt_client
 from pathlib import Path
 from mongo_helper import add_temperature_records,add_backgroundjob
-import shutil
+import shutil,json
 
 broker = 'localhost'
 port = 1883
 
 # Generate a Client ID with the subscribe prefix.
-client_id = f'subscribe-{random.randint(0, 100)}'
+client_id = f'subscribe'
 # username = 'emqx'
 # password = 'public'
 
@@ -25,9 +25,13 @@ def connect_mqtt() -> mqtt_client:
         else:
             print("Failed to connect, return code %d\n", rc)
 
+    def on_disconnect(client, userdata, rc):    
+        print("disconnected OK")
+
     client = mqtt_client.Client(client_id)
     # client.username_pw_set(username, password)
     client.on_connect = on_connect
+    client.on_disconnect = on_disconnect
     client.connect(broker, port)
     return client
 
@@ -49,36 +53,51 @@ def publish(client,topic):
 
 
 def subscribe(client: mqtt_client):
-    def on_message(client, userdata, msg):
-        if msg.topic == 'device1/filetransfer_status/':
-            transfer_allfiles("device1")            
-        elif msg.topic == "device1/sensor_data/":            
-            add_temperature_records(msg.payload.decode())
-
+    def on_message(client, userdata, msg):        
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
 
-    client.subscribe("device1/filetransfer_status/")
-    client.subscribe("device1/sensor_data/")
-    client.on_message = on_message
+    
 
-def transfer_allfiles(device1:str):    
+    client.subscribe("$looke/#")    
+    client.on_message = on_message
+    client.message_callback_add("$looke/sensor_data_status/+", on_message_sensordata)
+    client.message_callback_add("$looke/filetransfer_status/+", on_message_filestatus)
+    
+
+def transfer_allfiles(recordStr:str): 
+    record =json.loads(recordStr)     
     try:        
-        shutil.rmtree(destination +"/"+device1, ignore_errors=False, onerror=None)
+        shutil.rmtree(destination +"/"+record["device_id"], ignore_errors=False, onerror=None)
         print('Folder deleted')
     except:
         print("Folder doesn't exist")
 
-    Path(destination +"/"+device1).mkdir(parents=True, exist_ok=True)    
-    allfiles = os.listdir(source)
+    Path(destination +"/"+record["device_id"]).mkdir(parents=True, exist_ok=True)    
+    
+    allfiles = record["files"]
     # iterate on all files to move them to destination folder
     for f in allfiles:
-        src_path = os.path.join(source, f)
-        dst_path = os.path.join(destination +"/"+device1, f)              
-        os.rename(src_path, dst_path)
+        try:  
+            src_path = os.path.join(source, f)
+            dst_path = os.path.join(destination +"/"+record["device_id"], f)              
+            os.rename(src_path, dst_path)
+        except:
+            print("record file are not exist")
+    device_destination_folder =destination +"/"+record["device_id"]
+    add_backgroundjob(record,device_destination_folder)
 
-    add_backgroundjob(destination +"/"+device1)
 
+def on_message_filestatus(client, userdata, msg):
+    print("on_message_filestatus")
+    record =json.loads(msg.payload.decode())
+    print(record)
+    transfer_allfiles(msg.payload.decode())  
+    #print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
 
+def on_message_sensordata(client, userdata, msg):
+    print("on_message_sensordata")
+    add_temperature_records(msg.payload.decode()) 
+    print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
 
 
 def run():
