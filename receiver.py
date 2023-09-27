@@ -67,23 +67,23 @@ def subscribe(client: mqtt_client):
 def transfer_allfiles(recordStr:str): 
     record =json.loads(recordStr)     
     try:        
-        shutil.rmtree(destination +"/"+record["device_id"], ignore_errors=False, onerror=None)
+        shutil.rmtree(destination +"/"+record["device_thing"], ignore_errors=False, onerror=None)
         print('Folder deleted')
     except:
         print("Folder doesn't exist")
 
-    Path(destination +"/"+record["device_id"]).mkdir(parents=True, exist_ok=True)    
+    Path(destination +"/"+record["device_thing"]).mkdir(parents=True, exist_ok=True)    
     
     allfiles = record["files"]
     # iterate on all files to move them to destination folder
     for f in allfiles:
         try:  
             src_path = os.path.join(source, f)
-            dst_path = os.path.join(destination +"/"+record["device_id"], f)              
+            dst_path = os.path.join(destination +"/"+record["device_thing"], f)              
             os.rename(src_path, dst_path)
         except:
             print("record file are not exist")
-    device_destination_folder =destination +"/"+record["device_id"]
+    device_destination_folder =destination +"/"+record["device_thing"]
     add_backgroundjob(record,device_destination_folder)
 
 
