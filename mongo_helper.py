@@ -18,7 +18,13 @@ recordcollection=mydatabase["records"]
 jobcollection=mydatabase["jobqueue"]
 settingscollection=mydatabase["settings"]
 eventscollection=mydatabase["events"]
+lnccollection=mydatabase["lnc"]
 
+
+cloudClient = MongoClient("mongodb://looke:looke123@107.23.147.153:27017/lookedb")  
+cloudDatabase = cloudClient["lookedb"]  
+exportCollection=cloudDatabase["exporter.channels"]
+thingsCollection=cloudDatabase["things"]
 
 
 def add_backgroundjob(record:any,device_destination_folder:str):    
@@ -118,3 +124,28 @@ def record_event(record:any, event_type:any, event_value:any):
         eventscollection.insert_one(event)
         print("events captured")
     
+def deletelnc():
+     result = lnccollection.delete_many({})  
+
+
+def initlnc():
+        lnc = lnccollection.find_one({})
+        print(lnc)
+        if lnc is None:
+            thing = thingsCollection.find_one({ 'thing_id': 'Edge_Device','is_registered':True })                
+            if thing is None:
+                 return False
+            else:
+                lnc =exportCollection.find_one({'_id' : ObjectId(thing["exporterchannel"])})                
+                lnccollection.insert_one(lnc)
+                print('inserted lnc')
+                return True
+        else:
+             print(lnc["updatedAt"])
+        
+        return False
+
+
+
+initlnc()
+#deletelnc()
