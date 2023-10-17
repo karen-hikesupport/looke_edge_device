@@ -141,11 +141,14 @@ def initlnc():
                 print('inserted lnc')
                 return True
         else:
-             print(lnc["updatedAt"])
+             print("lnc is have")
         
         return False
 
+def get_alljob():    
+    for x in jobcollection.find():
+        print(x)  
 
-
-initlnc()
+#initlnc()
 #deletelnc()
+#get_alljob()

@@ -6,9 +6,9 @@ import time
 from paho.mqtt import client as mqtt_client
 
 
-broker = 'broker.emqx.io'
+broker = 'localhost'
 port = 1883
-topic = "python/mqtt"
+#topic = "python/mqtt"
 # Generate a Client ID with the publish prefix.
 client_id = f'publish-{random.randint(0, 1000)}'
 # username = 'emqx'
@@ -28,27 +28,19 @@ def connect_mqtt():
     return client
 
 
-def publish(client):
-    msg_count = 1
-    while True:
-        time.sleep(1)
-        msg = f"messages: {msg_count}"
-        result = client.publish(topic, msg)
-        # result: [0, 1]
-        status = result[0]
-        if status == 0:
-            print(f"Send `{msg}` to topic `{topic}`")
-        else:
-            print(f"Failed to send message to topic {topic}")
-        msg_count += 1
-        if msg_count > 5:
-            break
+def publish(client, topic):
+    result = client.publish(topic, "")        
+    status = result[0]
+    if status == 0:
+        print(f"Send  to topic `{topic}`")
+    else:
+        print(f"Failed to send message to topic {topic}")
 
 
 def run():
     client = connect_mqtt()
     client.loop_start()
-    publish(client)
+    publish(client,"$looke/device/client_device/start_countzone")
     client.loop_stop()
 
 
