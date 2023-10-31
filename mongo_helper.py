@@ -5,6 +5,7 @@ import socket
 import json
 import datetime
 import os
+import configparser
   
 
 # creation of MongoClient
@@ -19,6 +20,8 @@ jobcollection=mydatabase["jobqueue"]
 settingscollection=mydatabase["settings"]
 eventscollection=mydatabase["events"]
 lnccollection=mydatabase["lnc"]
+detectioncollection=mydatabase["detections"]
+
 
 
 cloudClient = MongoClient("mongodb://looke:looke123@107.23.147.153:27017/lookedb")  
@@ -27,21 +30,47 @@ exportCollection=cloudDatabase["exporter.channels"]
 thingsCollection=cloudDatabase["things"]
 
 
+config = configparser.ConfigParser()
+config.read('/home/nvidia/mqttpaho/config.ini')
+ 
+device_configuration = config["device_configuration"]
+device_id = device_configuration["device_id"]
+device_thing = device_configuration["device_thing"]
+lnc_id = device_configuration["lnc_id"]
+
 def add_backgroundjob(record:any,device_destination_folder:str):    
-    doc1 = {
-        "exporterchannel": ObjectId(record["exporterchannel"]),
-        "deck":record["deck"],
-        "penId":record["pen"],
-        "job_status":0,
-        "deviceId":ObjectId(record["device_id"]),
-        "location":record["location"],
-        "eventTime": datetime.datetime.now(),
-        "video_image_path":device_destination_folder,     
-        "files":record["files"],
-        "device_tasks":record["tasks"],
-        "device_configuration":record["config"]              
-    }
-    jobcollection.insert_one(doc1)
+
+    if len(record["left_files"])>0:
+        doc1 = {
+            "exporterchannel": ObjectId(record["exporterchannel"]),
+            "deck":record["deck"],
+            "penId":record["pen"],
+            "job_status":0,
+            "deviceId":ObjectId(record["device_id"]),
+            "location":record["location"],
+            "eventTime": datetime.datetime.now(),
+            "video_image_path":device_destination_folder,     
+            "files":record["left_files"],
+            "device_tasks":record["tasks"],
+            "device_configuration":record["config"]              
+        }
+        jobcollection.insert_one(doc1)
+
+    if len(record["right_files"])>0:
+        doc2 = {
+            "exporterchannel": ObjectId(record["exporterchannel"]),
+            "deck":record["deck"],
+            "penId":record["pen"],
+            "job_status":0,
+            "deviceId":ObjectId(record["device_id"]),
+            "location":record["location"],
+            "eventTime": datetime.datetime.now(),
+            "video_image_path":device_destination_folder,     
+            "files":record["right_files"],
+            "device_tasks":record["tasks"],
+            "device_configuration":record["config"]              
+        }
+        jobcollection.insert_one(doc2)
 
 
 def add_temperature_records(recordStr:str):
@@ -132,16 +161,24 @@ def initlnc():
         lnc = lnccollection.find_one({})
         print(lnc)
         if lnc is None:
-            thing = thingsCollection.find_one({ 'thing_id': 'Edge_Device','is_registered':True })                
+            thing = thingsCollection.find_one({ 'thing_id': device_thing,'is_registered':True })                
             if thing is None:
                  return False
             else:
-                lnc =exportCollection.find_one({'_id' : ObjectId(thing["exporterchannel"])})                
+                lnc = exportCollection.find_one({'_id' : ObjectId(thing["exporterchannel"])})                
                 lnccollection.insert_one(lnc)
+                config.set('device_configuration', 'lnc_id', str(lnc.get("_id")))
+                config.set('device_configuration', 'device_id', str(thing.get("_id")))
                 print('inserted lnc')
                 return True
         else:
              print("lnc is have")
+             lnc = exportCollection.find_one({'_id' : ObjectId(lnc["_id"])})  
+             filter = { '_id': lnc["_id"] }
+             newvalues = { "$set": lnc }
+             lnccollection.update_one(filter, newvalues)              
+             print("updated lnc")
+             return True
         
         return False
 
@@ -149,6 +186,11 @@ def get_alljob():
     for x in jobcollection.find():
         print(x)  
 
+def get_all_detection():
+     for x in detectioncollection.find():
+        print(x)
+
 #initlnc()
 #deletelnc()
 #get_alljob()
+#get_all_detection()

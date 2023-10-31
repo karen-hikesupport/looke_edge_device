@@ -4,7 +4,7 @@ import random
 import os
 from paho.mqtt import client as mqtt_client
 from pathlib import Path
-from mongo_helper import add_temperature_records,add_backgroundjob
+from mongo_helper import add_temperature_records,add_backgroundjob,initlnc
 import shutil,json
 
 broker = 'localhost'
@@ -65,26 +65,28 @@ def subscribe(client: mqtt_client):
     
 
 def transfer_allfiles(recordStr:str): 
-    record =json.loads(recordStr)     
-    try:        
-        shutil.rmtree(destination +"/"+record["device_thing"], ignore_errors=False, onerror=None)
-        print('Folder deleted')
-    except:
-        print("Folder doesn't exist")
-
-    Path(destination +"/"+record["device_thing"]).mkdir(parents=True, exist_ok=True)    
+    records =json.loads(recordStr)   
     
-    allfiles = record["files"]
-    # iterate on all files to move them to destination folder
-    for f in allfiles:
-        try:  
-            src_path = os.path.join(source, f)
-            dst_path = os.path.join(destination +"/"+record["device_thing"], f)              
-            os.rename(src_path, dst_path)
+    for record in records:
+        try:        
+            shutil.rmtree(destination +"/"+record["device_thing"], ignore_errors=False, onerror=None)
+            print('Folder deleted')
         except:
-            print("record file are not exist")
-    device_destination_folder =destination +"/"+record["device_thing"]
-    add_backgroundjob(record,device_destination_folder)
+            print("Folder doesn't exist")
+
+        Path(destination +"/"+record["device_thing"]).mkdir(parents=True, exist_ok=True)    
+    
+        allfiles = record["files"]
+        # iterate on all files to move them to destination folder
+        for f in allfiles:
+            try:  
+                src_path = os.path.join(source, f)
+                dst_path = os.path.join(destination +"/"+record["device_thing"], f)              
+                os.rename(src_path, dst_path)
+            except:
+                print("record file are not exist")
+        device_destination_folder =destination +"/"+record["device_thing"]
+        add_backgroundjob(record,device_destination_folder)
 
 
 def on_message_filestatus(client, userdata, msg):
@@ -102,7 +104,10 @@ def on_message_sensordata(client, userdata, msg):
 
 def run():
     client = connect_mqtt()
-    subscribe(client)    
+    haslnc = initlnc()
+    if haslnc:        
+        subscribe(client)    
+        
     client.loop_forever()
 
 
