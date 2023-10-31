@@ -37,8 +37,7 @@ def connect_mqtt() -> mqtt_client:
 
 def publish(client,topic):
     msg_count = 1
-    while True:
-        time.sleep(1)
+    while True:        
         msg = f"messages: {msg_count}"
         result = client.publish(topic, msg)
         # result: [0, 1]
