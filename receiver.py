@@ -61,31 +61,33 @@ def subscribe(client: mqtt_client):
     client.on_message = on_message
     client.message_callback_add("$looke/sensor_data_status/+", on_message_sensordata)
     client.message_callback_add("$looke/filetransfer_status/+", on_message_filestatus)
+    client.message_callback_add("$looke/send_capture_data/+", on_message_send_capture_data)
+    
     
 
 def transfer_allfiles(recordStr:str): 
-    records =json.loads(recordStr)   
-    
-    for record in records:
-        try:        
-            shutil.rmtree(destination +"/"+record["device_thing"], ignore_errors=False, onerror=None)
-            print('Folder deleted')
-        except:
-            print("Folder doesn't exist")
+    record =json.loads(recordStr)   
+        
+    # try:        
+    #     shutil.rmtree(destination +"/"+record["device_thing"], ignore_errors=False, onerror=None)
+    #     print('Folder deleted')
+    # except:
+    #     print("Folder doesn't exist")
 
-        Path(destination +"/"+record["device_thing"]).mkdir(parents=True, exist_ok=True)    
+    Path(destination +"/"+record["device_thing"]).mkdir(parents=True, exist_ok=True)    
     
-        allfiles = record["files"]
-        # iterate on all files to move them to destination folder
-        for f in allfiles:
-            try:  
-                src_path = os.path.join(source, f)
-                dst_path = os.path.join(destination +"/"+record["device_thing"], f)              
-                os.rename(src_path, dst_path)
-            except:
-                print("record file are not exist")
-        device_destination_folder =destination +"/"+record["device_thing"]
-        add_backgroundjob(record,device_destination_folder)
+    allfiles = record["files"]
+    # iterate on all files to move them to destination folder
+    for f in allfiles:
+        try:  
+            print(f)
+            src_path = os.path.join(source, f)
+            dst_path = os.path.join(destination +"/"+record["device_thing"], f)              
+            os.rename(src_path, dst_path)
+        except:
+            print("record file are not exist")
+    device_destination_folder =destination +"/"+record["device_thing"]
+    add_backgroundjob(record,device_destination_folder)
 
 
 def on_message_filestatus(client, userdata, msg):
@@ -94,6 +96,12 @@ def on_message_filestatus(client, userdata, msg):
     print(record)
     transfer_allfiles(msg.payload.decode())  
     #print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+
+def on_message_send_capture_data(client, userdata, msg):
+    print("on_message_send_capture_data")
+    record =json.loads(msg.payload.decode())
+    print(record)
+    transfer_allfiles(msg.payload.decode())  
 
 def on_message_sensordata(client, userdata, msg):
     print("on_message_sensordata")

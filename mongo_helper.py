@@ -39,9 +39,8 @@ device_thing = device_configuration["device_thing"]
 lnc_id = device_configuration["lnc_id"]
 
 def add_backgroundjob(record:any,device_destination_folder:str):    
-
-    if len(record["left_files"])>0:
-        doc1 = {
+   
+    doc1 = {
             "exporterchannel": ObjectId(record["exporterchannel"]),
             "deck":record["deck"],
             "penId":record["pen"],
@@ -50,27 +49,13 @@ def add_backgroundjob(record:any,device_destination_folder:str):
             "location":record["location"],
             "eventTime": datetime.datetime.now(),
             "video_image_path":device_destination_folder,     
-            "files":record["left_files"],
+            "files":record["files"],
             "device_tasks":record["tasks"],
             "device_configuration":record["config"]              
         }
-        jobcollection.insert_one(doc1)
+    jobcollection.insert_one(doc1)
 
-    if len(record["right_files"])>0:
-        doc2 = {
-            "exporterchannel": ObjectId(record["exporterchannel"]),
-            "deck":record["deck"],
-            "penId":record["pen"],
-            "job_status":0,
-            "deviceId":ObjectId(record["device_id"]),
-            "location":record["location"],
-            "eventTime": datetime.datetime.now(),
-            "video_image_path":device_destination_folder,     
-            "files":record["right_files"],
-            "device_tasks":record["tasks"],
-            "device_configuration":record["config"]              
-        }
-        jobcollection.insert_one(doc2)
+    
 
 
 def add_temperature_records(recordStr:str):
