@@ -6,7 +6,7 @@ import json
 import datetime
 import os
 import configparser
-  
+import looke_constant
 
 # creation of MongoClient
 client=MongoClient()  
@@ -24,14 +24,15 @@ detectioncollection=mydatabase["detections"]
 
 
 
-cloudClient = MongoClient("mongodb://looke:looke123@107.23.147.153:27017/lookedb")  
+cloudClient = MongoClient(looke_constant.cloud_mongodb_connection_string)  
 cloudDatabase = cloudClient["lookedb"]  
 exportCollection=cloudDatabase["exporter.channels"]
 thingsCollection=cloudDatabase["things"]
+analysis_jobCollection=cloudDatabase["analysis.jobs"]
 
 
 config = configparser.ConfigParser()
-config.read('/home/nvidia/mqttpaho/config.ini')
+config.read(looke_constant.root_path +'/config.ini')
  
 device_configuration = config["device_configuration"]
 device_id = device_configuration["device_id"]
@@ -61,11 +62,12 @@ def add_backgroundjob(record:any,device_destination_folder:str):
 def add_temperature_records(recordStr:str):
     record =json.loads(recordStr)
 
-    amonia_alert =4
-    rh_alert =4
-    wbt_alert =4
-    temperature_alert =4
+    amonia_alert =5
+    rh_alert =60
+    wbt_alert =60
+    temperature_alert =60
     for x in settingscollection.find({"exporterchannel" : record["exporterchannel"] }):
+        print(x)
         if x["key"] == 'amonia_alert':
             amonia_alert = float(x["value"])
         elif x["key"] == "rhAlert":
@@ -76,7 +78,11 @@ def add_temperature_records(recordStr:str):
             temperature_alert = float(x["value"])
         else:
             print("no match alert setting")
-
+    
+    print("amonia_alert: "+ str(amonia_alert))
+    print("rh_alert: "+ str(rh_alert))
+    print("wbt_alert: "+ str(wbt_alert))
+    print("temperature_alert: "+ str(temperature_alert))
     is_event = False
     if amonia_alert <= float(record["NH3"]):
         record_event(record,1,float(record["NH3"]))
@@ -95,7 +101,7 @@ def add_temperature_records(recordStr:str):
         is_event=True
 
 
-    doc1 = {
+    doc = {
         "exporterchannel": ObjectId(record["exporterchannel"]),
         "deck":record["deck"],
         "penId":record["pen"],        
@@ -114,9 +120,9 @@ def add_temperature_records(recordStr:str):
         "CO2":record["CO2"],
         "CH4":record["CH4"],
         "is_synced":False       
-    }
-    
-    recordcollection.insert_one(doc1)
+    }    
+    _newRecord = recordcollection.insert_one(doc)
+    addToSyncWithCloudJob(_newRecord, "created","records")
 
 
 
@@ -135,16 +141,25 @@ def record_event(record:any, event_type:any, event_value:any):
         "eventStatus":1,
         "is_synced":False   
         }
-        eventscollection.insert_one(event)
+        _newEvent = eventscollection.insert_one(event)
         print("events captured")
-    
+        addToSyncWithCloudJob(_newEvent, "created","events")
+
+def addToSyncWithCloudJob(_doc:any, _type:any, collection_type:any):
+        syncjobdoc = {
+        "type": _type,
+        "document": _doc,
+        "_collection": collection_type,
+        "ref": _doc._id
+        }
+        analysis_jobCollection.insert_one(syncjobdoc)
+
 def deletelnc():
      result = lnccollection.delete_many({})  
 
 
 def initlnc():
-        lnc = lnccollection.find_one({})
-        print(lnc)
+        lnc = lnccollection.find_one({})        
         if lnc is None:
             thing = thingsCollection.find_one({ 'thing_id': device_thing,'is_registered':True })                
             if thing is None:
@@ -174,6 +189,8 @@ def get_alljob():
 def get_all_detection():
      for x in detectioncollection.find():
         print(x)
+
+
 
 #initlnc()
 #deletelnc()

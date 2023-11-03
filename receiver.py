@@ -6,6 +6,8 @@ from paho.mqtt import client as mqtt_client
 from pathlib import Path
 from mongo_helper import add_temperature_records,add_backgroundjob,initlnc
 import shutil,json
+import looke_constant
+
 
 broker = 'localhost'
 port = 1883
@@ -15,8 +17,8 @@ client_id = f'subscribe'
 # username = 'emqx'
 # password = 'public'
 
-source = '/home/nvidia/camera_stream'
-destination = '/home/nvidia/mqttpaho/input_data'
+#source = '/home/nvidia/camera_stream'
+#destination = '/home/nvidia/mqttpaho/input_data'
 
 def connect_mqtt() -> mqtt_client:
     def on_connect(client, userdata, flags, rc):
@@ -74,19 +76,19 @@ def transfer_allfiles(recordStr:str):
     # except:
     #     print("Folder doesn't exist")
 
-    Path(destination +"/"+record["device_thing"]).mkdir(parents=True, exist_ok=True)    
+    Path(looke_constant.destination +"/"+record["device_thing"]).mkdir(parents=True, exist_ok=True)    
     
     allfiles = record["files"]
     # iterate on all files to move them to destination folder
     for f in allfiles:
         try:  
             print(f)
-            src_path = os.path.join(source, f)
-            dst_path = os.path.join(destination +"/"+record["device_thing"], f)              
+            src_path = os.path.join(looke_constant.source, f)
+            dst_path = os.path.join(looke_constant.destination +"/"+record["device_thing"], f)              
             os.rename(src_path, dst_path)
         except:
             print("record file are not exist")
-    device_destination_folder =destination +"/"+record["device_thing"]
+    device_destination_folder =looke_constant.destination +"/"+record["device_thing"]
     add_backgroundjob(record,device_destination_folder)
 
 
